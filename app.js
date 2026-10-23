@@ -150,20 +150,7 @@ const DEFAULT_STORE_DATA = {
         { id: "e5", name: "Su, İnternet, Güvenlik & Temizlik", amount: 2800 },
         { id: "e6", name: "Part-Time Yardımcı Eleman / Sigorta", amount: 16000 }
     ],
-    notes: [
-        {
-            id: "n1",
-            author: "Enes",
-            text: "Antep fıstığı ve lüks karışıkta piyasanın 20-30 TL altında kalarak sürümden çok iyi müşteri çekiyoruz. Ay çekirdeği sıcak kavrum saatlerini akşam 17:00'ye sabitleyelim.",
-            createdAt: Date.now() - 3600000 * 5
-        },
-        {
-            id: "n2",
-            author: "Ali Osman",
-            text: "Ambalaj toptancısından 50kg kraft kese kağıdı siparişi verdim, sabit giderlere bu ayın faturasını işledim.",
-            createdAt: Date.now() - 3600000 * 2
-        }
-    ],
+    notes: [],
     logs: [
         {
             id: "l1",
@@ -280,6 +267,10 @@ function initSyncEngine(roomCode) {
     if (savedRaw) {
         try {
             storeData = JSON.parse(savedRaw);
+            // Eski örnek notları (n1, n2) otomatik temizle
+            if (Array.isArray(storeData.notes)) {
+                storeData.notes = storeData.notes.filter((n) => n.id !== "n1" && n.id !== "n2");
+            }
         } catch (err) {
             console.error("Veri okuma hatası:", err);
             storeData = structuredClone(DEFAULT_STORE_DATA);
@@ -901,6 +892,9 @@ function renderSimulationTable() {
 
 // 5. ORTAK NOTLAR VE İŞLEM GEÇMİŞİ
 function renderNotesAndLogs() {
+    if (Array.isArray(storeData.notes)) {
+        storeData.notes = storeData.notes.filter((n) => n.id !== "n1" && n.id !== "n2");
+    }
     const notes = storeData.notes || [];
     const logs = storeData.logs || [];
 
@@ -908,15 +902,25 @@ function renderNotesAndLogs() {
 
     const notesEl = document.getElementById("notes-list");
     if (notes.length === 0) {
-        notesEl.innerHTML = `<p style="color: var(--text-muted); font-size:0.85rem;">Henüz ortak notu eklenmemiş.</p>`;
+        notesEl.innerHTML = `<p style="color: var(--text-muted); font-size:0.85rem;">Henüz ortak notu eklenmemiş. Yukarıdaki kutucuktan yeni not ekleyebilirsiniz.</p>`;
     } else {
         notesEl.innerHTML = notes
             .map(
                 (n) => `
-            <div class="note-card">
+            <div class="note-card" data-id="${n.id}">
                 <div class="note-meta">
                     <strong>👤 ${escapeHtml(n.author)}</strong>
-                    <span>${formatTimeAgo(n.createdAt)}</span>
+                    <div class="note-meta-right">
+                        <span>${formatTimeAgo(n.createdAt)}</span>
+                        <button type="button" class="note-action-btn edit-note-btn" data-id="${n.id}" title="Notu Düzenle">
+                            <i data-lucide="pencil"></i>
+                            <span>Notu Düzenle</span>
+                        </button>
+                        <button type="button" class="note-action-btn danger delete-note-btn" data-id="${n.id}" title="Notu Kaldır">
+                            <i data-lucide="trash-2"></i>
+                            <span>Notu Kaldır</span>
+                        </button>
+                    </div>
                 </div>
                 <p class="note-text">${escapeHtml(n.text)}</p>
             </div>
@@ -1220,21 +1224,80 @@ function setupEventListeners() {
         });
     });
 
-    // Ortak Not Ekleme
-    document.getElementById("note-form").addEventListener("submit", (e) => {
+    // Ortak Not Ekleme / Düzenleme / Kaldırma
+    const noteForm = document.getElementById("note-form");
+    const noteInput = document.getElementById("note-input");
+    const editingNoteIdInput = document.getElementById("editing-note-id");
+    const noteSubmitText = document.getElementById("note-submit-text");
+    const noteCancelEditBtn = document.getElementById("note-cancel-edit-btn");
+
+    const resetNoteFormState = () => {
+        editingNoteIdInput.value = "";
+        noteInput.value = "";
+        noteSubmitText.textContent = "Yeni Not Ekle";
+        noteCancelEditBtn.classList.add("hidden");
+    };
+
+    noteCancelEditBtn.addEventListener("click", resetNoteFormState);
+
+    noteForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        const input = document.getElementById("note-input");
-        const text = input.value.trim();
-        if (text) {
+        const text = noteInput.value.trim();
+        const editingId = editingNoteIdInput.value;
+        if (!text) return;
+
+        storeData.notes = storeData.notes || [];
+
+        if (editingId) {
+            const targetNote = storeData.notes.find((n) => n.id === editingId);
+            if (targetNote) {
+                targetNote.text = text;
+                targetNote.author = currentPartner || targetNote.author || "Ortak";
+                targetNote.createdAt = Date.now();
+                saveAndBroadcast(`Ortak panodaki bir notu düzenledi`);
+                showToast(`✏️ Not güncellendi`);
+            }
+        } else {
             storeData.notes.unshift({
                 id: "n_" + Date.now(),
                 author: currentPartner || "Ortak",
                 text,
                 createdAt: Date.now()
             });
-            input.value = "";
-            saveAndBroadcast(`Ortak panoya yeni bir not bıraktı`);
-            showToast(`💬 Notunuz ortağınızla paylaşıldı`);
+            saveAndBroadcast(`Ortak panoya yeni bir not ekledi`);
+            showToast(`💬 Yeni not eklendi ve ortağınızla paylaşıldı`);
+        }
+
+        resetNoteFormState();
+    });
+
+    document.getElementById("notes-list").addEventListener("click", (e) => {
+        const editBtn = e.target.closest(".edit-note-btn");
+        if (editBtn) {
+            const id = editBtn.getAttribute("data-id");
+            const note = (storeData.notes || []).find((n) => n.id === id);
+            if (note) {
+                editingNoteIdInput.value = note.id;
+                noteInput.value = note.text;
+                noteSubmitText.textContent = "Notu Güncelle";
+                noteCancelEditBtn.classList.remove("hidden");
+                noteInput.focus();
+            }
+            return;
+        }
+
+        const delBtn = e.target.closest(".delete-note-btn");
+        if (delBtn) {
+            const id = delBtn.getAttribute("data-id");
+            const note = (storeData.notes || []).find((n) => n.id === id);
+            if (note && confirm("Bu notu kaldırmak istediğinize emin misiniz?")) {
+                storeData.notes = (storeData.notes || []).filter((n) => n.id !== id);
+                if (editingNoteIdInput.value === id) {
+                    resetNoteFormState();
+                }
+                saveAndBroadcast(`Ortak panodan bir notu kaldırdı`);
+                showToast(`🗑️ Not kaldırıldı`);
+            }
         }
     });
 
