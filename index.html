@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuruyemiş Ortak Yönetim & Kâr Analiz Sistemi</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- GİRİŞ / ORTAK ODA EKRANI (LOGIN OVERLAY) -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo-badge">🌰</div>
+                <h1>Kuruyemiş Ortak Panel</h1>
+                <p>İki ortağın anlık senkronize çalıştığı maliyet, başabaş ve kâr simülasyon sistemi</p>
+            </div>
+            
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="partner-name">Adınız / Rolünüz</label>
+                    <div class="input-icon-wrap">
+                        <i data-lucide="user"></i>
+                        <input type="text" id="partner-name" placeholder="Örn: Ahmet (1. Ortak)" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="room-code">Dükkan Ortak Oda Kodu</label>
+                    <div class="input-icon-wrap">
+                        <i data-lucide="key-round"></i>
+                        <input type="text" id="room-code" placeholder="Örn: lezzet-kuruyemis-2026" required>
+                    </div>
+                    <small class="field-hint">İki ortak da aynı oda kodunu girdiğinde tüm veriler anlık olarak eşitlenir.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="room-pin">Ortak Giriş Şifresi (PIN)</label>
+                    <div class="input-icon-wrap">
+                        <i data-lucide="lock"></i>
+                        <input type="password" id="room-pin" placeholder="••••" value="1234" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i data-lucide="log-in"></i>
+                    <span>Dükkan Paneline Bağlan</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <button type="button" id="open-firebase-setup-from-login" class="btn-link">
+                    <i data-lucide="cloud-cog"></i> Firebase Bulut Yapılandırması (İsteğe Bağlı Özel DB)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE AYARLARI MODALI -->
+    <div id="firebase-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <i data-lucide="flame" class="amber-icon"></i>
+                    <h2>Firebase Gerçek Zamanlı Bulut Bağlantısı</h2>
+                </div>
+                <button type="button" id="close-firebase-modal" class="icon-btn">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="info-banner">
+                    <i data-lucide="info"></i>
+                    <div>
+                        <strong>Nasıl Çalışır?</strong>
+                        <p>Uygulama varsayılan olarak <strong>Anlık Ortak Senkronizasyon Motoru</strong> ile çalışır (aynı cihazda sekmeler arası ve bulut bağlantısı aktif olduğunda cihazlar arası). Farklı şehir/cihazlardan iki ortağın tamamen kendi özel <strong>Google Firebase Realtime Database</strong> veya <strong>Firestore</strong> sunucunuz üzerinden anlık senkronize olması için Firebase bilgilerinizi aşağıya yapıştırabilirsiniz.</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fb-database-url">Firebase Realtime Database URL (En Kolay Yöntem)</label>
+                    <input type="url" id="fb-database-url" placeholder="https://dukkan-projeniz-default-rtdb.europe-west1.firebasedatabase.app">
+                    <small class="field-hint">Firebase Console &rarr; Realtime Database &rarr; Kurallar (Rules) kısm에서 <code>".read": true, ".write": true</code> yaparak sadece URL ile bile anında iki cihazı birbirine bağlayabilirsiniz!</small>
+                </div>
+
+                <div class="divider-text"><span>VEYA TAM FIREBASE CONFIG JSON</span></div>
+
+                <div class="form-group">
+                    <label for="fb-config-json">Firebase SDK Config (İsteğe Bağlı)</label>
+                    <textarea id="fb-config-json" rows="5" placeholder='{"apiKey": "...", "authDomain": "...", "databaseURL": "https://...", "projectId": "..."}'></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="clear-firebase-btn" class="btn btn-outline">Varsayılan Moda Dön</button>
+                    <button type="button" id="save-firebase-btn" class="btn btn-primary">
+                        <i data-lucide="check-circle-2"></i> Kaydet ve Bağlan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÜRÜN DÜZENLEME / EKLEME MODALI -->
+    <div id="product-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <i data-lucide="package-plus" class="amber-icon"></i>
+                    <h2 id="product-modal-title">Yeni Kuruyemiş / Ürün Ekle</h2>
+                </div>
+                <button type="button" id="close-product-modal" class="icon-btn">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="product-form" class="modal-body">
+                <input type="hidden" id="product-id">
+                
+                <div class="form-row">
+                    <div class="form-group flex-2">
+                        <label for="prod-name">Ürün Adı</label>
+                        <input type="text" id="prod-name" placeholder="Örn: Kavrulmuş Antep Fıstığı (Duble)" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="prod-category">Kategori</label>
+                        <select id="prod-category">
+                            <option value="Kuruyemiş">🌰 Kuruyemiş</option>
+                            <option value="Kuru Meyve">🍇 Kuru Meyve</option>
+                            <option value="Kahve & Şekerleme">☕ Kahve & Şekerleme</option>
+                            <option value="Cips & Çerez">🥨 Cips & Çerez</option>
+                            <option value="Baharat & Bakliyat">🌶️ Baharat & Diğer</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="prod-unit">Birim</label>
+                        <select id="prod-unit">
+                            <option value="kg">Kilogram (kg)</option>
+                            <option value="adet">Paket / Adet</option>
+                            <option value="koli">Koli</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-waste">Fire / Kırık Oranı (%)</label>
+                        <input type="number" id="prod-waste" step="0.1" min="0" max="50" value="2">
+                        <small class="field-hint">Kavurma/eleme kaybı maliyete eklenir</small>
+                    </div>
+                </div>
+
+                <div class="form-row three-cols">
+                    <div class="form-group">
+                        <label for="prod-cost">Alış Fiyatı (TL)</label>
+                        <input type="number" id="prod-cost" step="0.01" min="0.01" placeholder="Örn: 480" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-price">Hedef Satış Fiyatı (TL)</label>
+                        <input type="number" id="prod-price" step="0.01" min="0.01" placeholder="Örn: 720" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-market">Piyasa Ortalaması (TL)</label>
+                        <input type="number" id="prod-market" step="0.01" min="0" placeholder="Örn: 750" required>
+                    </div>
+                </div>
+
+                <!-- Anlık Önizleme Kutusu -->
+                <div class="live-profit-preview">
+                    <div class="preview-item">
+                        <span>Net Birim Maliyet (Fire Dahil):</span>
+                        <strong id="preview-real-cost">0,00 ₺</strong>
+                    </div>
+                    <div class="preview-item">
+                        <span>Birim Net Kâr:</span>
+                        <strong id="preview-unit-profit" class="text-success">0,00 ₺</strong>
+                    </div>
+                    <div class="preview-item">
+                        <span>Brüt Kâr Marjı:</span>
+                        <strong id="preview-margin" class="badge-margin">%0,0</strong>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="cancel-product-btn" class="btn btn-outline">İptal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save"></i> Ürünü Kaydet ve Senkronize Et
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA KABUĞU -->
+    <div class="app-shell">
+        <!-- ÜST BİLGİ ÇUBUĞU (TOPBAR) -->
+        <header class="topbar">
+            <div class="brand-area">
+                <div class="brand-logo">🌰</div>
+                <div>
+                    <div class="brand-title-row">
+                        <h2>Kuruyemiş Ortak Yönetim</h2>
+                        <span id="room-badge" class="room-pill">Oda: -</span>
+                    </div>
+                    <p class="brand-subtitle">Gerçek Zamanlı Maliyet, Başabaş & Kâr Simülasyonu</p>
+                </div>
+            </div>
+
+            <div class="topbar-actions">
+                <!-- Canlı Senkronizasyon Durumu -->
+                <div id="sync-status-pill" class="sync-pill synced" title="Veriler ortaklar arasında anlık senkronize ediliyor">
+                    <span class="pulse-dot"></span>
+                    <span id="sync-status-text">Canlı Senkronizasyon Aktif</span>
+                </div>
+
+                <!-- Ortak Paylaşım Butonu -->
+                <button type="button" id="share-room-btn" class="btn btn-secondary btn-sm" title="Ortağınıza davet bağlantısını kopyalayın">
+                    <i data-lucide="share-2"></i>
+                    <span>Ortak Linkini Kopyala</span>
+                </button>
+
+                <!-- Bulut / Firebase Ayarı -->
+                <button type="button" id="open-firebase-btn" class="btn btn-outline btn-sm" title="Firebase Bulut Ayarları">
+                    <i data-lucide="cloud"></i>
+                    <span class="hide-mobile">Bulut Ayarı</span>
+                </button>
+
+                <!-- Kullanıcı Bilgisi ve Çıkış -->
+                <div class="partner-profile">
+                    <div class="partner-avatar" id="partner-avatar">A</div>
+                    <div class="partner-info hide-mobile">
+                        <span id="active-partner-name">Ortak</span>
+                        <small id="last-sync-time">Az önce güncellendi</small>
+                    </div>
+                    <button type="button" id="logout-btn" class="icon-btn" title="Odayı Değiştir / Çıkış">
+                        <i data-lucide="log-out"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ÜST ÖZET KARTLARI (KPI STRIP) -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap amber">
+                    <i data-lucide="package"></i>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Toplam Ürün & Ort. Marj</span>
+                    <div class="kpi-value-row">
+                        <strong id="kpi-total-products">0 Ürün</strong>
+                        <span id="kpi-avg-margin" class="kpi-tag amber">%0 Marj</span>
+                    </div>
+                    <small id="kpi-market-position">Piyasa ile dengeli</small>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap terracotta">
+                    <i data-lucide="receipt"></i>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Aylık Sabit Giderler</span>
+                    <div class="kpi-value-row">
+                        <strong id="kpi-monthly-expenses">0 ₺</strong>
+                        <span id="kpi-daily-expense-burden" class="kpi-tag terracotta">Günlük: 0 ₺</span>
+                    </div>
+                    <small>Kira, elektrik, personel vb. toplamı</small>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap green">
+                    <i data-lucide="trending-up"></i>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Simülasyon Günlük Ciro</span>
+                    <div class="kpi-value-row">
+                        <strong id="kpi-sim-revenue">0 ₺</strong>
+                        <span id="kpi-sim-gross-profit" class="kpi-tag green">Brüt Kâr: 0 ₺</span>
+                    </div>
+                    <small id="kpi-sim-total-kg">Toplam 0 kg/adet günlük satış</small>
+                </div>
+            </div>
+
+            <div class="kpi-card highlight-card">
+                <div class="kpi-icon-wrap gold">
+                    <i data-lucide="wallet"></i>
+                </div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Tahmini Aylık Net Kâr (Ortak Başı)</span>
+                    <div class="kpi-value-row">
+                        <strong id="kpi-monthly-net-profit">0 ₺</strong>
+                        <span id="kpi-per-partner-profit" class="kpi-tag gold">Kişi Başı: 0 ₺</span>
+                    </div>
+                    <small id="kpi-breakeven-status">Başabaş durumu hesaplanıyor...</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEKME (TAB) MENÜSÜ -->
+        <nav class="tab-nav">
+            <button type="button" class="tab-btn active" data-tab="tab-products">
+                <i data-lucide="nut"></i>
+                <span>1. Ürün Yönetimi & Kâr Analizi</span>
+            </button>
+            <button type="button" class="tab-btn" data-tab="tab-breakeven">
+                <i data-lucide="scale"></i>
+                <span>2. Sabit Giderler & Başabaş (Break-Even)</span>
+            </button>
+            <button type="button" class="tab-btn" data-tab="tab-simulation">
+                <i data-lucide="calculator"></i>
+                <span>3. Günlük Satış & Ortak Kâr Simülasyonu</span>
+            </button>
+            <button type="button" class="tab-btn" data-tab="tab-activity">
+                <i data-lucide="users"></i>
+                <span>4. Ortak İşlem Geçmişi & Notlar</span>
+                <span id="notes-count-badge" class="tab-counter">0</span>
+            </button>
+        </nav>
+
+        <!-- ANA İÇERİK ALANI -->
+        <main class="main-content">
+            <!-- SEKME 1: ÜRÜN YÖNETİMİ VE KÂR ANALİZİ -->
+            <section id="tab-products" class="tab-panel active">
+                <div class="panel-header">
+                    <div>
+                        <h3>🌰 Ürün Maliyetleri, Piyasa Kıyaslaması ve Kâr Analizi</h3>
+                        <p>Alış fiyatı, fire oranı, hedef satış fiyatı ve piyasa ortalamasını anlık düzenleyin. Tablodaki fiyatlara doğrudan tıklayarak da hızlıca değiştirebilirsiniz.</p>
+                    </div>
+                    <div class="panel-actions">
+                        <div class="search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="product-search" placeholder="Ürün veya kategori ara...">
+                        </div>
+                        <select id="category-filter" class="select-filter">
+                            <option value="ALL">Tüm Kategoriler</option>
+                            <option value="Kuruyemiş">🌰 Kuruyemiş</option>
+                            <option value="Kuru Meyve">🍇 Kuru Meyve</option>
+                            <option value="Kahve & Şekerleme">☕ Kahve & Şekerleme</option>
+                            <option value="Cips & Çerez">🥨 Cips & Çerez</option>
+                            <option value="Baharat & Bakliyat">🌶️ Baharat & Diğer</option>
+                        </select>
+                        <button type="button" id="add-product-btn" class="btn btn-primary">
+                            <i data-lucide="plus"></i>
+                            <span>Yeni Ürün Ekle</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ürün Adı & Kategori</th>
+                                <th class="num-col">Alış Fiyatı</th>
+                                <th class="num-col">Fireli Net Maliyet</th>
+                                <th class="num-col">Hedef Satış Fiyatı</th>
+                                <th class="num-col">Piyasa Ortalaması</th>
+                                <th class="num-col">Birim Net Kâr (TL)</th>
+                                <th class="num-col">Brüt Kâr Marjı (%)</th>
+                                <th class="center-col">Piyasa Durumu</th>
+                                <th class="action-col">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-tbody">
+                            <!-- JS ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SEKME 2: SABİT GİDERLER VE BAŞABAŞ (BREAK-EVEN) NOKTASI -->
+            <section id="tab-breakeven" class="tab-panel">
+                <div class="split-layout">
+                    <!-- SOL: AYLIK SABİT GİDERLER -->
+                    <div class="card expense-card">
+                        <div class="card-header">
+                            <div>
+                                <h3>🏢 Aylık Sabit Giderler</h3>
+                                <p>Dükkanın her ay düzenli ödediği sabit işletme masrafları</p>
+                            </div>
+                            <span id="total-expense-badge" class="badge-large">0 ₺ / Ay</span>
+                        </div>
+
+                        <form id="expense-form" class="inline-add-form">
+                            <input type="text" id="exp-name" placeholder="Gider Kalemi (Örn: Dükkan Kirası)" required>
+                            <input type="number" id="exp-amount" step="10" min="0" placeholder="Tutar (TL)" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i data-lucide="plus"></i> Ekle
+                            </button>
+                        </form>
+
+                        <div id="expenses-list" class="expenses-list">
+                            <!-- JS ile doldurulacak -->
+                        </div>
+
+                        <div class="expense-summary-box">
+                            <div class="summary-row">
+                                <span>Aylık Toplam Sabit Gider:</span>
+                                <strong id="summary-monthly-exp">0,00 ₺</strong>
+                            </div>
+                            <div class="summary-row">
+                                <span>Günlük Amortisman Yükü (30 Gün):</span>
+                                <strong id="summary-daily-exp">0,00 ₺ / gün</strong>
+                            </div>
+                            <div class="summary-row">
+                                <span>Ortak Başına Aylık Risk Yükü:</span>
+                                <strong id="summary-partner-exp">0,00 ₺ / kişi</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SAĞ: ÜRÜN BAZLI BAŞABAŞ (BREAK-EVEN) ANALİZİ -->
+                    <div class="card breakeven-card">
+                        <div class="card-header">
+                            <div>
+                                <h3>⚖️ Ürün Bazlı Başabaş (Break-Even) Noktası</h3>
+                                <p>Aylık tüm sabit masrafları (<strong><span id="be-target-expense">0 ₺</span></strong>) çıkarmak için hangi üründen kaç kg/adet satılmalı?</p>
+                            </div>
+                            <div class="be-mode-toggle">
+                                <span class="mode-hint">Tek Ürün Bazlı & Karma Sepet Dağılımı</span>
+                            </div>
+                        </div>
+
+                        <!-- Karma Sepet Başabaş Özeti -->
+                        <div class="mixed-breakeven-banner">
+                            <div class="mixed-be-icon">🎯</div>
+                            <div class="mixed-be-details">
+                                <h4>Ortalama Karma Sepet Başabaş Hedefi</h4>
+                                <p>Dükkan genelindeki ortalama birim kârınız <strong id="be-avg-unit-profit">0 ₺/birim</strong> ve ortalama kâr marjınız <strong id="be-avg-margin">%0</strong>. Sabit giderleri sıfırlamak için tüm ürünlerden toplamda:</p>
+                                <div class="mixed-be-metrics">
+                                    <div class="metric-pill">
+                                        <span>Günlük Gereken Satış:</span>
+                                        <strong id="be-mixed-daily-kg">0 kg/adet</strong>
+                                    </div>
+                                    <div class="metric-pill">
+                                        <span>Aylık Gereken Satış:</span>
+                                        <strong id="be-mixed-monthly-kg">0 kg/adet</strong>
+                                    </div>
+                                    <div class="metric-pill">
+                                        <span>Günlük Başabaş Cirosu:</span>
+                                        <strong id="be-mixed-daily-rev">0 ₺</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container compact-table">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ürün Adı</th>
+                                        <th class="num-col">Birim Net Kâr</th>
+                                        <th class="num-col">Tek Başına Günlük Satış</th>
+                                        <th class="num-col">Tek Başına Aylık Satış</th>
+                                        <th class="num-col">Karma Sepetteki Payı ile Günlük</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="breakeven-tbody">
+                                    <!-- JS ile doldurulacak -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEKME 3: GÜNLÜK SATIŞ VE ORTAK KÂR SİMÜLASYONU -->
+            <section id="tab-simulation" class="tab-panel">
+                <div class="sim-top-controls">
+                    <div>
+                        <h3>📈 Günlük Satış & Canlı Kâr Simülasyonu</h3>
+                        <p>Her üründen günlük ortalama kaç kg/adet satılacağını girin; anlık ciro, sabit gider karşılama oranı ve iki ortağın net kâr payı otomatik hesaplansın.</p>
+                    </div>
+                    <div class="sim-presets">
+                        <span class="preset-label">Hızlı Senaryo Yükle:</span>
+                        <button type="button" class="btn btn-outline btn-sm sim-preset-btn" data-multiplier="0.6">🌧️ Sakin Gün (%60)</button>
+                        <button type="button" class="btn btn-outline btn-sm sim-preset-btn" data-multiplier="1.0">☀️ Normal Gün (%100)</button>
+                        <button type="button" class="btn btn-outline btn-sm sim-preset-btn" data-multiplier="1.5">🔥 Yoğun / Hafta Sonu (%150)</button>
+                    </div>
+                </div>
+
+                <!-- Başabaş İlerleme Çubuğu (Break-Even Progress Bar) -->
+                <div class="breakeven-progress-card">
+                    <div class="progress-header">
+                        <div>
+                            <span class="progress-title">Günlük Sabit Gider Karşılama & Başabaş Durumu</span>
+                            <p id="sim-progress-desc">Günlük brüt kârınız sabit giderlerin %0'ını karşılıyor.</p>
+                        </div>
+                        <div class="progress-numbers">
+                            <span id="sim-daily-gross-vs-exp">0 ₺ / 0 ₺</span>
+                        </div>
+                    </div>
+                    <div class="progress-track">
+                        <div id="sim-progress-bar" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="partner-split-bar">
+                        <div class="split-box">
+                            <span>Günlük Net Kâr (Giderler Düşülmüş):</span>
+                            <strong id="sim-daily-net-profit">0 ₺</strong>
+                        </div>
+                        <div class="split-box">
+                            <span>Aylık (30 Gün) Net Kâr Projeksiyonu:</span>
+                            <strong id="sim-monthly-net-profit">0 ₺</strong>
+                        </div>
+                        <div class="split-box highlight">
+                            <span>Ortak Başına Aylık Net Kazanç (%50 / %50):</span>
+                            <strong id="sim-partner-share">0 ₺</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simülasyon Tablosu -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ürün Adı</th>
+                                <th class="num-col">Satış Fiyatı</th>
+                                <th class="num-col">Birim Net Kâr</th>
+                                <th class="sim-input-col">Günlük Satış Miktarı (kg / adet)</th>
+                                <th class="num-col">Günlük Ciro (TL)</th>
+                                <th class="num-col">Günlük Brüt Kâr (TL)</th>
+                                <th class="num-col">Aylık Kâr Katkısı (30 Gün)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="simulation-tbody">
+                            <!-- JS ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SEKME 4: ORTAK İŞLEM GEÇMİŞİ VE DÜKKAN NOTLARI -->
+            <section id="tab-activity" class="tab-panel">
+                <div class="split-layout">
+                    <!-- SOL: ORTAK NOTLAR & KARARLAR -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h3>💬 Ortaklar Arası Notlar & Toptancı Kararları</h3>
+                                <p>Fiyat değişimleri, toptancı teklifleri veya dükkan ihtiyaçları için ortak panoya not bırakın.</p>
+                            </div>
+                        </div>
+
+                        <form id="note-form" class="inline-add-form">
+                            <input type="text" id="note-input" placeholder="Örn: Gaziantep toptancısından yeni mahsul fıstık fiyatı 465 TL'ye düştü..." required>
+                            <button type="submit" class="btn btn-primary">
+                                <i data-lucide="send"></i> Paylaş
+                            </button>
+                        </form>
+
+                        <div id="notes-list" class="notes-feed">
+                            <!-- JS ile doldurulacak -->
+                        </div>
+                    </div>
+
+                    <!-- SAĞ: ANLIK SENKRONİZASYON VE VERİ YÖNETİMİ -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h3>🔄 Canlı İşlem Kayıtları & Yedekleme</h3>
+                                <p>Hangi ortağın ne zaman fiyat veya miktar güncellediğini takip edin.</p>
+                            </div>
+                            <button type="button" id="reset-demo-btn" class="btn btn-outline btn-sm">
+                                <i data-lucide="rotate-ccw"></i> Örnek Verileri Sıfırla
+                            </button>
+                        </div>
+
+                        <div class="backup-actions">
+                            <button type="button" id="export-json-btn" class="btn btn-secondary btn-sm">
+                                <i data-lucide="download"></i> Verileri İndir (.JSON)
+                            </button>
+                            <label for="import-json-input" class="btn btn-outline btn-sm cursor-pointer">
+                                <i data-lucide="upload"></i> Yedek Yükle (.JSON)
+                            </label>
+                            <input type="file" id="import-json-input" accept=".json" class="hidden">
+                        </div>
+
+                        <div id="activity-log-list" class="activity-log">
+                            <!-- JS ile doldurulacak -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- BİLDİRİM (TOAST) KONTEYNERİ -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Uygulama Scripti -->
+    <script src="app.js"></script>
+</body>
+</html>
