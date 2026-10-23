@@ -64,7 +64,7 @@
                     <label for="room-pin">Ortak Giriş Şifresi (PIN)</label>
                     <div class="input-icon-wrap">
                         <i data-lucide="lock"></i>
-                        <input type="password" id="room-pin" placeholder="••••" value="1234" required>
+                        <input type="password" id="room-pin" placeholder="••••" value="1461" required>
                     </div>
                 </div>
 
@@ -174,7 +174,7 @@
                     </div>
                 </div>
 
-                <div class="form-row three-cols">
+                <div class="form-row">
                     <div class="form-group">
                         <label for="prod-cost">Alış Fiyatı (TL)</label>
                         <input type="number" id="prod-cost" step="0.01" min="0.01" placeholder="Örn: 480" required>
@@ -182,10 +182,6 @@
                     <div class="form-group">
                         <label for="prod-price">Hedef Satış Fiyatı (TL)</label>
                         <input type="number" id="prod-price" step="0.01" min="0.01" placeholder="Örn: 720" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="prod-market">Piyasa Ortalaması (TL)</label>
-                        <input type="number" id="prod-market" step="0.01" min="0" placeholder="Örn: 750" required>
                     </div>
                 </div>
 
@@ -275,7 +271,7 @@
                         <strong id="kpi-total-products">0 Ürün</strong>
                         <span id="kpi-avg-margin" class="kpi-tag amber">%0 Marj</span>
                     </div>
-                    <small id="kpi-market-position">Piyasa ile dengeli</small>
+                    <small id="kpi-market-position">Birim kâr ve marj analizi aktif</small>
                 </div>
             </div>
 
@@ -349,8 +345,8 @@
             <section id="tab-products" class="tab-panel active">
                 <div class="panel-header">
                     <div>
-                        <h3>🌰 Ürün Maliyetleri, Piyasa Kıyaslaması ve Kâr Analizi</h3>
-                        <p>Alış fiyatı, fire oranı, hedef satış fiyatı ve piyasa ortalamasını anlık düzenleyin. Tablodaki fiyatlara doğrudan tıklayarak da hızlıca değiştirebilirsiniz.</p>
+                        <h3>🌰 Ürün Maliyetleri ve Kâr Analizi</h3>
+                        <p>Alış fiyatı, fire oranı ve hedef satış fiyatını anlık düzenleyin. Tablodaki fiyatlara doğrudan tıklayarak da hızlıca değiştirebilirsiniz.</p>
                     </div>
                     <div class="panel-actions">
                         <div class="search-box">
@@ -380,10 +376,8 @@
                                 <th class="num-col">Alış Fiyatı</th>
                                 <th class="num-col">Fireli Net Maliyet</th>
                                 <th class="num-col">Hedef Satış Fiyatı</th>
-                                <th class="num-col">Piyasa Ortalaması</th>
                                 <th class="num-col">Birim Net Kâr (TL)</th>
                                 <th class="num-col">Brüt Kâr Marjı (%)</th>
-                                <th class="center-col">Piyasa Durumu</th>
                                 <th class="action-col">İşlem</th>
                             </tr>
                         </thead>
