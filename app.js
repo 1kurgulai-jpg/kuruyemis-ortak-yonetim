@@ -5,7 +5,7 @@
 
 // VARSAYILAN GERÇEKÇİ KURUYEMİŞ DÜKKANI VERİLERİ
 const DEFAULT_STORE_DATA = {
-    roomPin: "1234",
+    roomPin: "1461",
     updatedAt: Date.now(),
     updatedBy: "Sistem",
     products: [
@@ -583,21 +583,22 @@ function renderKPIs() {
     const dailyExpenseBurden = totalMonthlyExpenses / 30;
 
     let totalMarginSum = 0;
+    let totalUnitProfitSum = 0;
     let totalSimDailyRev = 0;
     let totalSimDailyGrossProfit = 0;
     let totalSimDailyKg = 0;
-    let cheaperThanMarketCount = 0;
 
     products.forEach((p) => {
         const m = calculateProductMetrics(p);
         totalMarginSum += m.grossMargin;
+        totalUnitProfitSum += m.unitProfit;
         totalSimDailyRev += m.dailyRevenue;
         totalSimDailyGrossProfit += m.dailyGrossProfit;
         totalSimDailyKg += Number(p.dailySimQty) || 0;
-        if (m.marketDiff <= 0) cheaperThanMarketCount++;
     });
 
     const avgMargin = products.length > 0 ? totalMarginSum / products.length : 0;
+    const avgUnitProfit = products.length > 0 ? totalUnitProfitSum / products.length : 0;
     const dailyNetProfit = totalSimDailyGrossProfit - dailyExpenseBurden;
     const monthlyNetProfit = dailyNetProfit * 30;
     const perPartnerMonthly = monthlyNetProfit / 2;
@@ -606,7 +607,7 @@ function renderKPIs() {
     document.getElementById("kpi-total-products").textContent = `${products.length} Çeşit`;
     document.getElementById("kpi-avg-margin").textContent = `%${avgMargin.toFixed(1)} Ort. Marj`;
     document.getElementById("kpi-market-position").textContent =
-        `${cheaperThanMarketCount}/${products.length} ürün piyasadan uygun/eşit`;
+        `Ortalama birim net kâr: ${formatTL(avgUnitProfit)}`;
 
     // Kart 2: Sabit Giderler
     document.getElementById("kpi-monthly-expenses").textContent = formatTLShort(totalMonthlyExpenses);
@@ -653,7 +654,7 @@ function renderProductsTable() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="center-col" style="padding: 32px; color: var(--text-muted);">
+                <td colspan="7" class="center-col" style="padding: 32px; color: var(--text-muted);">
                     Arama kriterlerine uygun kuruyemiş/ürün bulunamadı.
                 </td>
             </tr>
@@ -666,15 +667,6 @@ function renderProductsTable() {
             const m = calculateProductMetrics(p);
             const marginClass =
                 m.grossMargin >= 30 ? "high" : m.grossMargin >= 18 ? "medium" : "low";
-
-            let marketBadgeHtml = "";
-            if (m.marketDiff < -5) {
-                marketBadgeHtml = `<span class="market-badge advantage">🟢 Piyasadan ${Math.abs(Math.round(m.marketDiff))} ₺ Ucuz</span>`;
-            } else if (m.marketDiff > 5) {
-                marketBadgeHtml = `<span class="market-badge expensive">🟠 Piyasadan +${Math.round(m.marketDiff)} ₺ Pahalı</span>`;
-            } else {
-                marketBadgeHtml = `<span class="market-badge equal">⚖️ Piyasa ile Aynı</span>`;
-            }
 
             return `
                 <tr data-id="${p.id}">
@@ -702,11 +694,6 @@ function renderProductsTable() {
                         <small class="field-hint">₺/${p.unit}</small>
                     </td>
                     <td class="num-col">
-                        <input type="number" step="1" class="inline-num-input quick-edit-field"
-                            data-id="${p.id}" data-field="marketPrice" value="${p.marketPrice}" title="Piyasa fiyatını hızlı değiştir">
-                        <small class="field-hint">₺/${p.unit}</small>
-                    </td>
-                    <td class="num-col">
                         <strong class="${m.unitProfit >= 0 ? "text-success" : "text-danger"}">
                             ${m.unitProfit >= 0 ? "+" : ""}${formatTL(m.unitProfit)}
                         </strong>
@@ -714,9 +701,6 @@ function renderProductsTable() {
                     </td>
                     <td class="num-col">
                         <span class="badge-margin ${marginClass}">%${m.grossMargin.toFixed(1)}</span>
-                    </td>
-                    <td class="center-col">
-                        ${marketBadgeHtml}
                     </td>
                     <td class="action-col">
                         <button type="button" class="icon-btn edit-prod-btn" data-id="${p.id}" title="Detaylı Düzenle">
@@ -1030,6 +1014,11 @@ function setupEventListeners() {
     // Giriş Formu
     document.getElementById("login-form").addEventListener("submit", (e) => {
         e.preventDefault();
+        const enteredPin = document.getElementById("room-pin").value.trim();
+        if (enteredPin !== "1461") {
+            showToast("❌ Hatalı ortak giriş şifresi! (Şifre: 1461)");
+            return;
+        }
         currentPartner = partnerNameInput.value.trim() || "Ortak";
         currentRoom = roomCodeInput.value.trim().toLowerCase() || "bereket-kuruyemis";
 
@@ -1039,7 +1028,7 @@ function setupEventListeners() {
         authModal.classList.add("hidden");
         applySessionHeader();
         initSyncEngine(currentRoom);
-        showToast(`🌰 "${currentRoom}" dükkan odasına bağlandınız!`);
+        showToast(`🌰 Hoş geldin ${currentPartner}! "${currentRoom}" odasına bağlandınız.`);
     });
 
     // Odayı Değiştir / Çıkış
@@ -1126,7 +1115,6 @@ function setupEventListeners() {
         const wastePercent = Number(document.getElementById("prod-waste").value) || 0;
         const costPrice = Number(document.getElementById("prod-cost").value) || 0;
         const targetPrice = Number(document.getElementById("prod-price").value) || 0;
-        const marketPrice = Number(document.getElementById("prod-market").value) || 0;
 
         if (id) {
             const existing = storeData.products.find((p) => p.id === id);
@@ -1137,8 +1125,7 @@ function setupEventListeners() {
                     unit,
                     wastePercent,
                     costPrice,
-                    targetPrice,
-                    marketPrice
+                    targetPrice
                 });
                 saveAndBroadcast(`${name} ürün kartını güncelledi`);
                 showToast(`✅ ${name} güncellendi`);
@@ -1152,7 +1139,6 @@ function setupEventListeners() {
                 wastePercent,
                 costPrice,
                 targetPrice,
-                marketPrice,
                 dailySimQty: 5.0
             });
             saveAndBroadcast(`Yeni ürün ekledi: ${name}`);
@@ -1347,7 +1333,6 @@ function openProductModal(productId = null) {
         document.getElementById("prod-waste").value = p.wastePercent;
         document.getElementById("prod-cost").value = p.costPrice;
         document.getElementById("prod-price").value = p.targetPrice;
-        document.getElementById("prod-market").value = p.marketPrice;
     } else {
         title.textContent = "Yeni Kuruyemiş / Ürün Ekle";
         document.getElementById("product-form").reset();
