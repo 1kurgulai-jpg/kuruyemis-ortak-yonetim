@@ -24,10 +24,30 @@
             
             <form id="login-form" class="auth-form">
                 <div class="form-group">
-                    <label for="partner-name">Adınız / Rolünüz</label>
+                    <label>Giriş Yapan Ortak Seçimi</label>
+                    <div class="partner-selector-grid">
+                        <button type="button" class="partner-select-card active" data-partner="Enes">
+                            <span class="partner-badge-avatar">E</span>
+                            <div class="partner-card-info">
+                                <strong>Enes</strong>
+                                <small>Kurucu Ortak</small>
+                            </div>
+                        </button>
+                        <button type="button" class="partner-select-card" data-partner="Ali Osman">
+                            <span class="partner-badge-avatar">AO</span>
+                            <div class="partner-card-info">
+                                <strong>Ali Osman</strong>
+                                <small>Kurucu Ortak</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="partner-name">Kullanıcı Adı</label>
                     <div class="input-icon-wrap">
                         <i data-lucide="user"></i>
-                        <input type="text" id="partner-name" placeholder="Örn: Ahmet (1. Ortak)" required>
+                        <input type="text" id="partner-name" value="Enes" placeholder="Enes veya Ali Osman" required>
                     </div>
                 </div>
 
@@ -35,9 +55,9 @@
                     <label for="room-code">Dükkan Ortak Oda Kodu</label>
                     <div class="input-icon-wrap">
                         <i data-lucide="key-round"></i>
-                        <input type="text" id="room-code" placeholder="Örn: lezzet-kuruyemis-2026" required>
+                        <input type="text" id="room-code" value="bereket-kuruyemis" placeholder="Örn: bereket-kuruyemis" required>
                     </div>
-                    <small class="field-hint">İki ortak da aynı oda kodunu girdiğinde tüm veriler anlık olarak eşitlenir.</small>
+                    <small class="field-hint">Enes ve Ali Osman aynı oda kodunda tüm verileri anlık ortak görür.</small>
                 </div>
 
                 <div class="form-group">
