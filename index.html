@@ -326,15 +326,19 @@
             </button>
             <button type="button" class="tab-btn" data-tab="tab-breakeven">
                 <i data-lucide="scale"></i>
-                <span>2. Sabit Giderler & Başabaş (Break-Even)</span>
+                <span>2. Sabit Giderler & Başabaş</span>
             </button>
             <button type="button" class="tab-btn" data-tab="tab-simulation">
                 <i data-lucide="calculator"></i>
-                <span>3. Günlük Satış & Ortak Kâr Simülasyonu</span>
+                <span>3. Hedef & Kâr Simülasyonu</span>
+            </button>
+            <button type="button" class="tab-btn" data-tab="tab-daily-tracker">
+                <i data-lucide="shopping-bag"></i>
+                <span>4. Canlı Günlük Satış Takibi</span>
             </button>
             <button type="button" class="tab-btn" data-tab="tab-activity">
                 <i data-lucide="users"></i>
-                <span>4. Ortak İşlem Geçmişi & Notlar</span>
+                <span>5. Ortak Notlar & Geçmiş</span>
                 <span id="notes-count-badge" class="tab-counter">0</span>
             </button>
         </nav>
@@ -550,7 +554,144 @@
                 </div>
             </section>
 
-            <!-- SEKME 4: ORTAK İŞLEM GEÇMİŞİ VE DÜKKAN NOTLARI -->
+            <!-- SEKME 4: CANLI GÜNLÜK SATIŞ TAKİBİ (PARÇA PARÇA KG / GRAMAJ İŞLEME VE HEDEF KONTROLÜ) -->
+            <section id="tab-daily-tracker" class="tab-panel">
+                <div class="sim-top-controls">
+                    <div>
+                        <h3>⚖️ Canlı Günlük Satış Takibi & Hedef Kontrolü</h3>
+                        <p>Gün içinde sattığınız ürünleri parça parça (sabah 1 kg, öğlen 3 kg veya 250g, 500g şeklinde) işleyin; toplam yapılan satışın günlük hedefe ve başabaş noktasına ulaşıp ulaşmadığını anlık görün.</p>
+                    </div>
+                    <div class="tracker-date-controls">
+                        <label for="tracker-date-input">Satış Tarihi:</label>
+                        <input type="date" id="tracker-date-input" class="date-picker-input">
+                        <button type="button" id="tracker-today-btn" class="btn btn-outline btn-sm">Bugün</button>
+                        <button type="button" id="tracker-clear-day-btn" class="btn btn-outline btn-sm text-danger">
+                            <i data-lucide="trash-2"></i> Günü Sıfırla
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GÜNLÜK GERÇEKLEŞEN SATIŞ & HEDEF BAŞARI KARTI -->
+                <div class="breakeven-progress-card">
+                    <div class="progress-header">
+                        <div>
+                            <span class="progress-title">Günlük Gerçekleşen Satış vs. Günlük Hedef & Başabaş Durumu</span>
+                            <p id="tracker-goal-desc">Bugünkü satışlarınız günlük hedefinizin %0'ına ulaştı.</p>
+                        </div>
+                        <div class="progress-numbers">
+                            <span id="tracker-profit-vs-goal">Gerçekleşen Kâr: 0 ₺ / Hedef: 0 ₺</span>
+                        </div>
+                    </div>
+                    <div class="progress-track">
+                        <div id="tracker-progress-bar" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="partner-split-bar four-cols">
+                        <div class="split-box">
+                            <span>Bugün Satılan Toplam Miktar:</span>
+                            <strong id="tracker-total-kg">0,00 kg / adet</strong>
+                            <small id="tracker-target-kg-sub" class="field-hint">Günlük Hedef: 0 kg</small>
+                        </div>
+                        <div class="split-box">
+                            <span>Bugünkü Gerçekleşen Ciro:</span>
+                            <strong id="tracker-total-rev">0,00 ₺</strong>
+                            <small id="tracker-target-rev-sub" class="field-hint">Hedef Ciro: 0 ₺</small>
+                        </div>
+                        <div class="split-box">
+                            <span>Bugünkü Brüt Kâr:</span>
+                            <strong id="tracker-total-gross" class="text-success">0,00 ₺</strong>
+                            <small id="tracker-daily-exp-sub" class="field-hint">Günlük Sabit Gider: 0 ₺</small>
+                        </div>
+                        <div class="split-box highlight">
+                            <span>Gün Sonu Net Kâr (Sabit Gider Düşülmüş):</span>
+                            <strong id="tracker-net-profit">0,00 ₺</strong>
+                            <small id="tracker-breakeven-badge" class="field-hint">Başabaş durumu</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HIZLI SATIŞ EKLEME FORMU -->
+                <div class="card quick-sale-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>➕ Gün İçinde Yapılan Satışı Hızlı İşle (Kg veya Gramaj)</h3>
+                            <p>Örn: Sabah 1 kg fındık sattınız ekleyin, öğlen 3 kg daha sattınız tekrar ekleyin; sistem otomatik toplayıp 4 kg'a ulaştırır.</p>
+                        </div>
+                    </div>
+                    <form id="quick-sale-form" class="quick-sale-form-grid">
+                        <div class="form-group">
+                            <label for="sale-product-select">Satılan Ürün</label>
+                            <select id="sale-product-select" required>
+                                <!-- JS ile doldurulacak -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sale-qty-input">Miktar (Kg / Adet)</label>
+                            <div class="qty-with-presets">
+                                <input type="number" id="sale-qty-input" step="0.05" min="0.05" value="1" placeholder="Örn: 1.5" required>
+                                <div class="gram-presets">
+                                    <button type="button" class="gram-btn" data-val="0.25">250g</button>
+                                    <button type="button" class="gram-btn" data-val="0.5">500g</button>
+                                    <button type="button" class="gram-btn" data-val="1">1 Kg</button>
+                                    <button type="button" class="gram-btn" data-val="2">2 Kg</button>
+                                    <button type="button" class="gram-btn" data-val="3">3 Kg</button>
+                                    <button type="button" class="gram-btn" data-val="5">5 Kg</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="sale-note-input">Not / Öğün (İsteğe Bağlı)</label>
+                            <input type="text" id="sale-note-input" placeholder="Örn: Sabah satışı, Öğlen müşterisi...">
+                        </div>
+                        <div class="form-group sale-submit-col">
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i data-lucide="plus-circle"></i> Satışı Ekle
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ÜRÜN BAZLI GÜNLÜK HEDEF TAKİP TABLOSU VE SATIŞ HAREKETLERİ -->
+                <div class="split-layout tracker-split">
+                    <!-- SOL: TÜM ÜRÜNLERİN BUGÜNKÜ TOPLAM SATIŞI VE HEDEF DURUMU -->
+                    <div class="table-container">
+                        <div class="table-top-bar">
+                            <h4>📊 Ürün Bazlı Bugünkü Toplam Satış & Hedef Durumu</h4>
+                            <small>Tablodaki <strong>+250g, +500g, +1kg</strong> butonlarıyla da tek tıkla satış ekleyebilirsiniz</small>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün Adı</th>
+                                    <th class="center-col">Hızlı Satış Ekle</th>
+                                    <th class="num-col">Bugün Satılan</th>
+                                    <th class="num-col">Günlük Hedef</th>
+                                    <th class="center-col">Hedef Durumu</th>
+                                    <th class="num-col">Bugünkü Ciro & Kâr</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tracker-products-tbody">
+                                <!-- JS ile doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- SAĞ: BUGÜN GİRİLEN PARÇA PARÇA SATIŞ KAYITLARI (SABAH 1 KG, ÖĞLEN 3 KG VB.) -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h3>🧾 Bugünün Satış Hareketleri (Parça Parça)</h3>
+                                <p>Gün içinde eklediğiniz her satış kalemi saat ve miktarıyla burada listelenir. Yanlış girilen satışı silebilirsiniz.</p>
+                            </div>
+                            <span id="tracker-entries-count" class="room-pill">0 Kayıt</span>
+                        </div>
+                        <div id="tracker-entries-list" class="notes-feed">
+                            <!-- JS ile doldurulacak -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEKME 5: ORTAK İŞLEM GEÇMİŞİ VE DÜKKAN NOTLARI -->
             <section id="tab-activity" class="tab-panel">
                 <div class="split-layout">
                     <!-- SOL: ORTAK NOTLAR & KARARLAR -->
