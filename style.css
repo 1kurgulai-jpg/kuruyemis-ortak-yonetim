@@ -1314,18 +1314,58 @@ textarea:focus {
 .note-meta {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 0.75rem;
     color: var(--text-muted);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .note-meta strong {
     color: var(--primary-amber);
+    font-size: 0.84rem;
+}
+
+.note-meta-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.note-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    background: #fff;
+    color: var(--text-roasted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.note-action-btn svg {
+    width: 13px;
+    height: 13px;
+}
+
+.note-action-btn:hover {
+    background: var(--bg-sand);
+    color: var(--text-espresso);
+}
+
+.note-action-btn.danger:hover {
+    background: var(--terracotta-soft);
+    color: var(--terracotta-red);
+    border-color: rgba(198, 40, 40, 0.3);
 }
 
 .note-text {
     font-size: 0.9rem;
     color: var(--text-espresso);
+    white-space: pre-wrap;
 }
 
 .backup-actions {
