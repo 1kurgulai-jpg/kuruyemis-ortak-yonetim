@@ -3,152 +3,100 @@
 // Gerçek Zamanlı Ortak Veri Senkronizasyonu (Firebase Realtime DB + BroadcastChannel + LocalStorage)
 // ============================================================================
 
-// VARSAYILAN GERÇEKÇİ KURUYEMİŞ DÜKKANI VERİLERİ
+// VARSAYILAN KURUYEMİŞ DÜKKANI VERİLERİ (ENES & ALİ OSMAN GÜNCEL RAKAMLARI)
 const DEFAULT_STORE_DATA = {
     roomPin: "1461",
-    updatedAt: Date.now(),
-    updatedBy: "Sistem",
+    updatedAt: 1792765071413,
+    updatedBy: "Enes",
     products: [
+        {
+            id: "p_1792763216978",
+            name: "Dut Kurusu",
+            category: "Kuru Meyve",
+            unit: "kg",
+            wastePercent: 2,
+            costPrice: 575,
+            targetPrice: 850,
+            dailySimQty: 2
+        },
+        {
+            id: "p_1792763180994",
+            name: "Siyah Üzüm",
+            category: "Kuru Meyve",
+            unit: "kg",
+            wastePercent: 2,
+            costPrice: 400,
+            targetPrice: 650,
+            dailySimQty: 2
+        },
+        {
+            id: "p_1792763159515",
+            name: "Gün Kurusu",
+            category: "Kuru Meyve",
+            unit: "kg",
+            wastePercent: 2,
+            costPrice: 575,
+            targetPrice: 850,
+            dailySimQty: 2
+        },
+        {
+            id: "p_1792763064272",
+            name: "Kavrulmuş Siirt Fıstığı (Duble Ana Çıtlak)",
+            category: "Kuruyemiş",
+            unit: "kg",
+            wastePercent: 2,
+            costPrice: 1300,
+            targetPrice: 1850,
+            dailySimQty: 2
+        },
         {
             id: "p1",
             name: "Kavrulmuş Antep Fıstığı (Duble Ana Çıtlak)",
             category: "Kuruyemiş",
             unit: "kg",
-            costPrice: 540,
-            wastePercent: 2.0,
-            targetPrice: 790,
-            marketPrice: 820,
-            dailySimQty: 6.5
+            costPrice: 1300,
+            wastePercent: 2,
+            targetPrice: 1850,
+            dailySimQty: 2
         },
         {
             id: "p2",
             name: "Kavrulmuş Giresun Fındık İçi (Tombul)",
             category: "Kuruyemiş",
             unit: "kg",
-            costPrice: 360,
-            wastePercent: 1.5,
-            targetPrice: 530,
-            marketPrice: 550,
-            dailySimQty: 8.0
+            costPrice: 780,
+            wastePercent: 2,
+            targetPrice: 1300,
+            dailySimQty: 2
         },
         {
             id: "p3",
             name: "Datça Çiğ Badem İçi (İri Boy)",
             category: "Kuruyemiş",
             unit: "kg",
-            costPrice: 340,
-            wastePercent: 1.0,
-            targetPrice: 510,
-            marketPrice: 500,
-            dailySimQty: 5.5
+            costPrice: 800,
+            wastePercent: 2,
+            targetPrice: 1400,
+            dailySimQty: 2
         },
         {
             id: "p4",
             name: "Kavrulmuş Kaju (Jumbo W180)",
             category: "Kuruyemiş",
             unit: "kg",
-            costPrice: 390,
-            wastePercent: 2.0,
-            targetPrice: 580,
-            marketPrice: 600,
-            dailySimQty: 7.0
-        },
-        {
-            id: "p5",
-            name: "Nevşehir Kabak Çekirdeği (Süt Kavrulmuş)",
-            category: "Kuruyemiş",
-            unit: "kg",
-            costPrice: 210,
-            wastePercent: 1.5,
-            targetPrice: 330,
-            marketPrice: 340,
-            dailySimQty: 10.0
-        },
-        {
-            id: "p6",
-            name: "Tuzlu Dakota Ay Çekirdeği (Özel Kavrum)",
-            category: "Kuruyemiş",
-            unit: "kg",
-            costPrice: 85,
-            wastePercent: 2.5,
-            targetPrice: 150,
-            marketPrice: 160,
-            dailySimQty: 25.0
-        },
-        {
-            id: "p7",
-            name: "Çifte Kavrulmuş Sarı Leblebi (Çorum)",
-            category: "Kuruyemiş",
-            unit: "kg",
-            costPrice: 110,
-            wastePercent: 1.0,
-            targetPrice: 185,
-            marketPrice: 190,
-            dailySimQty: 12.0
-        },
-        {
-            id: "p8",
-            name: "Lüks Karışık Kuruyemiş (Özel Kokteyl)",
-            category: "Kuruyemiş",
-            unit: "kg",
-            costPrice: 380,
-            wastePercent: 1.5,
-            targetPrice: 590,
-            marketPrice: 610,
-            dailySimQty: 11.0
-        },
-        {
-            id: "p9",
-            name: "Malatya Gün Kurusu Kayısı (Jumbo)",
-            category: "Kuru Meyve",
-            unit: "kg",
-            costPrice: 240,
-            wastePercent: 1.0,
-            targetPrice: 370,
-            marketPrice: 380,
-            dailySimQty: 6.0
-        },
-        {
-            id: "p10",
-            name: "Aydın Dağ İnciri (Sarılop Kuru İncir)",
-            category: "Kuru Meyve",
-            unit: "kg",
-            costPrice: 270,
-            wastePercent: 1.5,
-            targetPrice: 410,
-            marketPrice: 420,
-            dailySimQty: 4.5
-        },
-        {
-            id: "p11",
-            name: "Taze Çekilmiş Türk Kahvesi (Özel Harman)",
-            category: "Kahve & Şekerleme",
-            unit: "kg",
-            costPrice: 310,
-            wastePercent: 1.0,
-            targetPrice: 480,
-            marketPrice: 490,
-            dailySimQty: 5.0
-        },
-        {
-            id: "p12",
-            name: "Antep Fıstıklı Çifte Kavrulmuş Lokum",
-            category: "Kahve & Şekerleme",
-            unit: "kg",
-            costPrice: 220,
-            wastePercent: 1.0,
-            targetPrice: 360,
-            marketPrice: 350,
-            dailySimQty: 6.0
+            costPrice: 680,
+            wastePercent: 2,
+            targetPrice: 1200,
+            dailySimQty: 2
         }
     ],
     expenses: [
-        { id: "e1", name: "Dükkan Kirası + Stopaj", amount: 35000 },
-        { id: "e2", name: "Elektrik (Kavurma Fırını & Klima)", amount: 8500 },
-        { id: "e3", name: "Kese Kağıdı, Ambalaj & Vakum Poşeti", amount: 4200 },
-        { id: "e4", name: "Muhasebe, Vergi & POS Komisyon Gideri", amount: 5500 },
-        { id: "e5", name: "Su, İnternet, Güvenlik & Temizlik", amount: 2800 },
-        { id: "e6", name: "Part-Time Yardımcı Eleman / Sigorta", amount: 16000 }
+        { id: "e_1792763281345", name: "Maaş & Yol & Yemek", amount: 52000 },
+        { id: "e_1792763397228", name: "Muhasebe & Sgk vs", amount: 17500 },
+        { id: "e_1792763460813", name: "Dükkan Kirası & Aidat", amount: 34000 },
+        { id: "e_1792763486530", name: "Faturalar", amount: 7000 },
+        { id: "e_1792763547434", name: "Mutfak & Temizlik Malzeme vs", amount: 3000 },
+        { id: "e_1792763600614", name: "Poşet & Ambalaj vs", amount: 3000 }
     ],
     notes: [],
     dailySales: {},
@@ -156,8 +104,8 @@ const DEFAULT_STORE_DATA = {
         {
             id: "l1",
             author: "Enes & Ali Osman",
-            action: "Kuruyemiş dükkanı ortak veri tabanı başlatıldı",
-            time: Date.now() - 3600000 * 6
+            action: "Güncel dükkan fiyatları ve sabit giderler eşitlendi",
+            time: 1792765071413
         }
     ]
 };
@@ -268,10 +216,21 @@ function initSyncEngine(roomCode) {
     const savedRaw = localStorage.getItem(getStorageKey(cleanRoom));
     if (savedRaw) {
         try {
-            storeData = JSON.parse(savedRaw);
-            // Eski örnek notları (n1, n2) otomatik temizle
-            if (Array.isArray(storeData.notes)) {
-                storeData.notes = storeData.notes.filter((n) => n.id !== "n1" && n.id !== "n2");
+            const parsedLocal = JSON.parse(savedRaw);
+            // Eğer tarayıcıda eski demo verisi ("Sistem" veya "Ahmet") kalmışsa, Enes'in güncel verisiyle değiştir
+            const isOldDemo =
+                parsedLocal.updatedBy === "Sistem" ||
+                (parsedLocal.updatedBy && parsedLocal.updatedBy.includes("Ahmet")) ||
+                (Array.isArray(parsedLocal.products) && parsedLocal.products.some((p) => p.id === "p12"));
+
+            if (isOldDemo && (!parsedLocal.updatedAt || parsedLocal.updatedAt <= DEFAULT_STORE_DATA.updatedAt)) {
+                storeData = structuredClone(DEFAULT_STORE_DATA);
+                localStorage.setItem(getStorageKey(cleanRoom), JSON.stringify(storeData));
+            } else {
+                storeData = parsedLocal;
+                if (Array.isArray(storeData.notes)) {
+                    storeData.notes = storeData.notes.filter((n) => n.id !== "n1" && n.id !== "n2");
+                }
             }
         } catch (err) {
             console.error("Veri okuma hatası:", err);
@@ -322,6 +281,29 @@ function getCloudTopicName(roomCode) {
     return `ky_ortak_db_v1_${safeRoom}`;
 }
 
+async function extractPayloadFromNtfyMsg(msg) {
+    if (!msg || msg.event !== "message") return null;
+    // Eğer mesaj büyük olduğu için ntfy.sh attachment dosyasına dönüştürdüyse URL'den indir
+    if (msg.attachment && msg.attachment.url) {
+        try {
+            const attRes = await fetch(msg.attachment.url);
+            if (attRes.ok) {
+                return await attRes.json();
+            }
+        } catch (err) {
+            console.warn("Bulut ek dosyası okunamadı:", err);
+        }
+    }
+    if (msg.message) {
+        try {
+            return JSON.parse(msg.message);
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
 async function setupInstantCloudSync(roomCode) {
     if (cloudEventSource) {
         cloudEventSource.close();
@@ -330,7 +312,7 @@ async function setupInstantCloudSync(roomCode) {
 
     const topic = getCloudTopicName(roomCode);
 
-    // 1. Önce buluttaki son kaydedilmiş durumu çek
+    // 1. Önce buluttaki son kaydedilmiş durumu çek (hem düz mesaj hem de >4KB attachment desteğiyle)
     try {
         const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
         if (res.ok) {
@@ -339,14 +321,12 @@ async function setupInstantCloudSync(roomCode) {
             for (let i = lines.length - 1; i >= 0; i--) {
                 try {
                     const msg = JSON.parse(lines[i]);
-                    if (msg.event === "message" && msg.message) {
-                        const parsedPayload = JSON.parse(msg.message);
-                        if (parsedPayload && parsedPayload.data && parsedPayload.data.updatedAt) {
-                            if (parsedPayload.data.updatedAt > storeData.updatedAt) {
-                                applyIncomingData(parsedPayload.data, "Bulut Senkronizasyon");
-                            }
-                            break;
+                    const parsedPayload = await extractPayloadFromNtfyMsg(msg);
+                    if (parsedPayload && parsedPayload.data && parsedPayload.data.updatedAt) {
+                        if (parsedPayload.data.updatedAt >= storeData.updatedAt) {
+                            applyIncomingData(parsedPayload.data, "Bulut Senkronizasyon", true);
                         }
+                        break;
                     }
                 } catch (e) {
                     // satır parse hatası yoksay
@@ -361,14 +341,12 @@ async function setupInstantCloudSync(roomCode) {
     if ("EventSource" in window) {
         try {
             cloudEventSource = new EventSource(`https://ntfy.sh/${topic}/sse`);
-            cloudEventSource.onmessage = (event) => {
+            cloudEventSource.onmessage = async (event) => {
                 try {
                     const outer = JSON.parse(event.data);
-                    if (outer && outer.message) {
-                        const payload = JSON.parse(outer.message);
-                        if (payload && payload.senderId !== sessionClientId && payload.data) {
-                            applyIncomingData(payload.data, payload.data.updatedBy || "Ortak Cihaz");
-                        }
+                    const payload = await extractPayloadFromNtfyMsg(outer);
+                    if (payload && payload.senderId !== sessionClientId && payload.data) {
+                        applyIncomingData(payload.data, payload.data.updatedBy || "Ortak Cihaz", true);
                     }
                 } catch (e) {
                     // ignore
@@ -382,12 +360,17 @@ async function setupInstantCloudSync(roomCode) {
 
 async function pushToInstantCloud(roomCode, data) {
     const topic = getCloudTopicName(roomCode);
+    // Mesaj boyutunu 4KB altında tutmak için bulut paketinde son 8 logu gönder
+    const compactData = {
+        ...data,
+        logs: Array.isArray(data.logs) ? data.logs.slice(0, 8) : []
+    };
     try {
         await fetch(`https://ntfy.sh/${topic}`, {
             method: "POST",
             body: JSON.stringify({
                 senderId: sessionClientId,
-                data: data
+                data: compactData
             })
         });
     } catch (err) {
@@ -395,9 +378,9 @@ async function pushToInstantCloud(roomCode, data) {
     }
 }
 
-function applyIncomingData(incomingData, sourceLabel = "Ortak") {
+function applyIncomingData(incomingData, sourceLabel = "Ortak", forceAccept = false) {
     if (!incomingData || !incomingData.updatedAt) return;
-    if (incomingData.updatedAt <= storeData.updatedAt) return;
+    if (!forceAccept && incomingData.updatedAt <= storeData.updatedAt) return;
 
     isApplyingRemoteUpdate = true;
     storeData = incomingData;
