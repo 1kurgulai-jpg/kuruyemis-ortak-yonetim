@@ -1,0 +1,30 @@
+{
+  "name": "Kuruyemiş Ortak Yönetim",
+  "short_name": "Kuruyemiş",
+  "description": "Enes & Ali Osman Kuruyemiş Dükkanı Ortak Maliyet, Başabaş ve Günlük Satış Takip Sistemi",
+  "start_url": "./?oda=bereket-kuruyemis&v=7",
+  "display": "standalone",
+  "background_color": "#2A1B12",
+  "theme_color": "#C86D28",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-180.png?v=7",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png?v=7",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png?v=7",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
