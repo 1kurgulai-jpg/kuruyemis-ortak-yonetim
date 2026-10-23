@@ -153,13 +153,13 @@ const DEFAULT_STORE_DATA = {
     notes: [
         {
             id: "n1",
-            author: "Ahmet (Ortak)",
+            author: "Enes",
             text: "Antep fıstığı ve lüks karışıkta piyasanın 20-30 TL altında kalarak sürümden çok iyi müşteri çekiyoruz. Ay çekirdeği sıcak kavrum saatlerini akşam 17:00'ye sabitleyelim.",
             createdAt: Date.now() - 3600000 * 5
         },
         {
             id: "n2",
-            author: "Mehmet (Ortak)",
+            author: "Ali Osman",
             text: "Ambalaj toptancısından 50kg kraft kese kağıdı siparişi verdim, sabit giderlere bu ayın faturasını işledim.",
             createdAt: Date.now() - 3600000 * 2
         }
@@ -167,7 +167,7 @@ const DEFAULT_STORE_DATA = {
     logs: [
         {
             id: "l1",
-            author: "Sistem",
+            author: "Enes & Ali Osman",
             action: "Kuruyemiş dükkanı ortak veri tabanı başlatıldı",
             time: Date.now() - 3600000 * 6
         }
@@ -990,8 +990,33 @@ function setupEventListeners() {
     const partnerNameInput = document.getElementById("partner-name");
     const roomCodeInput = document.getElementById("room-code");
 
-    partnerNameInput.value = currentPartner || "Ahmet (Ortak 1)";
+    partnerNameInput.value = currentPartner || "Enes";
     roomCodeInput.value = currentRoom || "bereket-kuruyemis";
+
+    // Ortak Seçim Kartları (Enes & Ali Osman)
+    const partnerCards = document.querySelectorAll(".partner-select-card");
+    const syncPartnerCardHighlight = (nameVal) => {
+        partnerCards.forEach((card) => {
+            if (card.getAttribute("data-partner").toLowerCase() === (nameVal || "").trim().toLowerCase()) {
+                card.classList.add("active");
+            } else {
+                card.classList.remove("active");
+            }
+        });
+    };
+    syncPartnerCardHighlight(partnerNameInput.value);
+
+    partnerCards.forEach((card) => {
+        card.addEventListener("click", () => {
+            const chosenName = card.getAttribute("data-partner");
+            partnerNameInput.value = chosenName;
+            syncPartnerCardHighlight(chosenName);
+        });
+    });
+
+    partnerNameInput.addEventListener("input", () => {
+        syncPartnerCardHighlight(partnerNameInput.value);
+    });
 
     // Eğer daha önce giriş yapıldıysa doğrudan aç
     if (currentPartner && currentRoom) {
@@ -1302,7 +1327,9 @@ function setupEventListeners() {
 function applySessionHeader() {
     document.getElementById("room-badge").textContent = `Oda: ${currentRoom}`;
     document.getElementById("active-partner-name").textContent = currentPartner;
-    document.getElementById("partner-avatar").textContent = (currentPartner[0] || "O").toUpperCase();
+    const parts = (currentPartner || "O").trim().split(/\s+/);
+    const initials = parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : (parts[0][0] || "O").toUpperCase();
+    document.getElementById("partner-avatar").textContent = initials;
 }
 
 function openProductModal(productId = null) {
