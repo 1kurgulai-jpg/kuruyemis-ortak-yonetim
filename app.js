@@ -4,7 +4,7 @@
 // ============================================================================
 
 // VARSAYILAN KURUYEMİŞ DÜKKANI VERİLERİ (ENES & ALİ OSMAN GÜNCEL RAKAMLARI)
-const DATA_SCHEMA_VERSION = 6;
+const DATA_SCHEMA_VERSION = 7;
 const DEFAULT_STORE_DATA = {
     schemaVersion: DATA_SCHEMA_VERSION,
     roomPin: "1461",
