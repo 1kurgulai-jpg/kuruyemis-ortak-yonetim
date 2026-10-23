@@ -895,6 +895,9 @@ function renderSimulationTable() {
 
 // 4.5 CANLI GÜNLÜK SATIŞ TAKİBİ (PARÇA PARÇA KG / GRAMAJ İŞLEME VE HEDEF KONTROLÜ)
 function renderDailyTracker() {
+    if (!Array.isArray(storeData.products) || storeData.products.length === 0) {
+        storeData.products = structuredClone(DEFAULT_STORE_DATA.products);
+    }
     const products = storeData.products || [];
     const expenses = storeData.expenses || [];
     storeData.dailySales = storeData.dailySales || {};
@@ -1271,6 +1274,7 @@ function setupEventListeners() {
             btn.classList.add("active");
             const targetId = btn.getAttribute("data-tab");
             document.getElementById(targetId)?.classList.add("active");
+            renderAll();
         });
     });
 
