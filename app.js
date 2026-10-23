@@ -151,6 +151,7 @@ const DEFAULT_STORE_DATA = {
         { id: "e6", name: "Part-Time Yardımcı Eleman / Sigorta", amount: 16000 }
     ],
     notes: [],
+    dailySales: {},
     logs: [
         {
             id: "l1",
@@ -165,6 +166,7 @@ const DEFAULT_STORE_DATA = {
 let currentPartner = localStorage.getItem("ky_partner_name") || "";
 let currentRoom = localStorage.getItem("ky_room_code") || "bereket-kuruyemis";
 let storeData = structuredClone(DEFAULT_STORE_DATA);
+let activeTrackerDate = new Date().toISOString().slice(0, 10);
 
 // Senkronizasyon Kanalları
 let broadcastChannel = null;
@@ -559,6 +561,7 @@ function renderAll() {
     renderProductsTable();
     renderExpensesAndBreakeven();
     renderSimulationTable();
+    renderDailyTracker();
     renderNotesAndLogs();
     if (window.lucide) {
         window.lucide.createIcons();
@@ -888,6 +891,219 @@ function renderSimulationTable() {
     const partnerShareEl = document.getElementById("sim-partner-share");
     partnerShareEl.textContent = (partnerShare >= 0 ? "+" : "") + formatTLShort(partnerShare) + " / Kişi";
     partnerShareEl.className = partnerShare >= 0 ? "text-success" : "text-danger";
+}
+
+// 4.5 CANLI GÜNLÜK SATIŞ TAKİBİ (PARÇA PARÇA KG / GRAMAJ İŞLEME VE HEDEF KONTROLÜ)
+function renderDailyTracker() {
+    const products = storeData.products || [];
+    const expenses = storeData.expenses || [];
+    storeData.dailySales = storeData.dailySales || {};
+
+    const dateInput = document.getElementById("tracker-date-input");
+    if (dateInput && dateInput.value !== activeTrackerDate) {
+        dateInput.value = activeTrackerDate;
+    }
+
+    // Ürün seçimi açılır listesini güncelle (seçili değeri koruyarak)
+    const selectEl = document.getElementById("sale-product-select");
+    if (selectEl) {
+        const prevSelected = selectEl.value;
+        selectEl.innerHTML = products
+            .map((p) => `<option value="${p.id}">${escapeHtml(p.name)} (${formatTL(p.targetPrice)}/${p.unit})</option>`)
+            .join("");
+        if (prevSelected && products.some((p) => p.id === prevSelected)) {
+            selectEl.value = prevSelected;
+        }
+    }
+
+    const entries = storeData.dailySales[activeTrackerDate] || [];
+
+    // Her ürün için bugün satılan toplam miktarı topla
+    const soldByProduct = {};
+    entries.forEach((entry) => {
+        soldByProduct[entry.productId] = (soldByProduct[entry.productId] || 0) + (Number(entry.qty) || 0);
+    });
+
+    const totalMonthlyExp = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const dailyExp = totalMonthlyExp / 30;
+
+    let totalActualKg = 0;
+    let totalTargetKg = 0;
+    let totalActualRev = 0;
+    let totalTargetRev = 0;
+    let totalActualGross = 0;
+    let totalTargetGross = 0;
+
+    const tbody = document.getElementById("tracker-products-tbody");
+    if (tbody) {
+        tbody.innerHTML = products
+            .map((p) => {
+                const m = calculateProductMetrics(p);
+                const soldQty = Number((soldByProduct[p.id] || 0).toFixed(3));
+                const targetQty = Number(p.dailySimQty) || 0;
+
+                const actualRev = soldQty * Number(p.targetPrice);
+                const actualProfit = soldQty * m.unitProfit;
+
+                totalActualKg += soldQty;
+                totalTargetKg += targetQty;
+                totalActualRev += actualRev;
+                totalTargetRev += m.dailyRevenue;
+                totalActualGross += actualProfit;
+                totalTargetGross += m.dailyGrossProfit;
+
+                const goalPct = targetQty > 0 ? Math.min(999, (soldQty / targetQty) * 100) : (soldQty > 0 ? 100 : 0);
+                const barWidth = Math.min(100, Math.max(0, goalPct));
+                const isGoalReached = soldQty >= targetQty && targetQty > 0;
+
+                let statusHtml = "";
+                if (isGoalReached) {
+                    statusHtml = `<span class="badge-margin high">✅ Hedef Tamam (%${goalPct.toFixed(0)})</span>`;
+                } else {
+                    const remaining = Math.max(0, targetQty - soldQty);
+                    statusHtml = `
+                        <div>
+                            <div class="goal-mini-bar"><div class="goal-mini-fill" style="width:${barWidth}%"></div></div>
+                            <strong>%${goalPct.toFixed(0)}</strong>
+                        </div>
+                        <small class="field-hint">Hedefe ${remaining.toFixed(2)} ${p.unit} kaldı</small>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>${escapeHtml(p.name)}</strong>
+                            <small class="field-hint">${formatTL(p.targetPrice)} / ${p.unit}</small>
+                        </td>
+                        <td class="center-col">
+                            <div class="quick-row-btns">
+                                <button type="button" class="quick-add-chip" data-id="${p.id}" data-qty="0.25" title="250 Gram Satış Ekle">+250g</button>
+                                <button type="button" class="quick-add-chip" data-id="${p.id}" data-qty="0.5" title="500 Gram Satış Ekle">+500g</button>
+                                <button type="button" class="quick-add-chip" data-id="${p.id}" data-qty="1" title="1 Kg Satış Ekle">+1kg</button>
+                                <button type="button" class="quick-add-chip" data-id="${p.id}" data-qty="3" title="3 Kg Satış Ekle">+3kg</button>
+                            </div>
+                        </td>
+                        <td class="num-col">
+                            <strong class="${soldQty > 0 ? "text-success" : ""}">${soldQty.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${p.unit}</strong>
+                        </td>
+                        <td class="num-col">
+                            <span>${targetQty.toFixed(1)} ${p.unit}</span>
+                        </td>
+                        <td class="center-col">
+                            ${statusHtml}
+                        </td>
+                        <td class="num-col">
+                            <strong>${formatTL(actualRev)}</strong>
+                            <small class="field-hint text-success">Kâr: +${formatTL(actualProfit)}</small>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+    }
+
+    // Üst İlerleme Kartı ve Özet Kutuları
+    const overallGoalPct = totalTargetGross > 0 ? (totalActualGross / totalTargetGross) * 100 : 0;
+    const clampedOverall = Math.min(100, Math.max(0, overallGoalPct));
+
+    document.getElementById("tracker-progress-bar").style.width = `${clampedOverall}%`;
+    document.getElementById("tracker-profit-vs-goal").textContent =
+        `Gerçekleşen Brüt Kâr: ${formatTLShort(totalActualGross)} / Günlük Hedef Kâr: ${formatTLShort(totalTargetGross)}`;
+
+    const goalDescEl = document.getElementById("tracker-goal-desc");
+    if (overallGoalPct >= 100 && totalTargetGross > 0) {
+        goalDescEl.innerHTML = `🏆 <strong>Harika!</strong> Bugünkü satışlarınızla günlük kâr hedefinizin <strong>%${overallGoalPct.toFixed(0)}</strong> seviyesine ulaştınız ve hedefi geçtiniz!`;
+    } else {
+        const remProfit = Math.max(0, totalTargetGross - totalActualGross);
+        goalDescEl.innerHTML = `📊 Bugünkü satışlarınız günlük hedefinizin <strong>%${overallGoalPct.toFixed(1)}</strong>'ine ulaştı. Günlük hedefi yakalamak için <strong>${formatTL(remProfit)}</strong> daha brüt kâr gerekiyor.`;
+    }
+
+    document.getElementById("tracker-total-kg").textContent = `${totalActualKg.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg / adet`;
+    document.getElementById("tracker-target-kg-sub").textContent = `Günlük Hedef: ${totalTargetKg.toFixed(1)} kg / adet`;
+
+    document.getElementById("tracker-total-rev").textContent = formatTL(totalActualRev);
+    document.getElementById("tracker-target-rev-sub").textContent = `Günlük Hedef Ciro: ${formatTLShort(totalTargetRev)}`;
+
+    document.getElementById("tracker-total-gross").textContent = "+" + formatTL(totalActualGross);
+    document.getElementById("tracker-daily-exp-sub").textContent = `Günlük Sabit Gider Yükü: ${formatTLShort(dailyExp)}`;
+
+    const netDayProfit = totalActualGross - dailyExp;
+    const netEl = document.getElementById("tracker-net-profit");
+    netEl.textContent = (netDayProfit >= 0 ? "+" : "") + formatTL(netDayProfit);
+    netEl.className = netDayProfit >= 0 ? "text-success" : "text-danger";
+
+    const beBadgeEl = document.getElementById("tracker-breakeven-badge");
+    if (netDayProfit >= 0) {
+        beBadgeEl.textContent = `✅ Bugünün sabit gideri çıktı, net kârdasınız!`;
+        beBadgeEl.className = "field-hint text-success";
+    } else {
+        beBadgeEl.textContent = `⏳ Başabaş için ${formatTLShort(Math.abs(netDayProfit))} kâr kaldı`;
+        beBadgeEl.className = "field-hint text-danger";
+    }
+
+    // Sağ Taraf: Parça Parça Girilen Satış Hareketleri Listesi
+    document.getElementById("tracker-entries-count").textContent = `${entries.length} Satış Kaydı`;
+    const entriesListEl = document.getElementById("tracker-entries-list");
+    if (entries.length === 0) {
+        entriesListEl.innerHTML = `<p style="color: var(--text-muted); font-size:0.85rem;">Bu tarihte henüz satış girişi yapılmadı. Yukarıdan veya tablodaki hızlı butonlardan satış ekleyebilirsiniz.</p>`;
+    } else {
+        entriesListEl.innerHTML = entries
+            .map((item) => {
+                const prod = products.find((p) => p.id === item.productId);
+                const prodName = prod ? prod.name : item.productName || "Ürün";
+                const unit = prod ? prod.unit : "kg";
+                const m = prod ? calculateProductMetrics(prod) : { unitProfit: 0 };
+                const itemRev = prod ? Number(prod.targetPrice) * Number(item.qty) : 0;
+                const itemProfit = m.unitProfit * Number(item.qty);
+                const timeStr = item.time ? new Date(item.time).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "";
+
+                return `
+                    <div class="note-card">
+                        <div class="note-meta">
+                            <strong>🕒 ${timeStr} • 👤 ${escapeHtml(item.author || "Ortak")}</strong>
+                            <div class="note-meta-right">
+                                <button type="button" class="note-action-btn danger delete-sale-entry-btn" data-id="${item.id}" title="Bu Satış Kaydını Sil">
+                                    <i data-lucide="trash-2"></i>
+                                    <span>Kaldır</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="note-text"><strong>+${Number(item.qty).toLocaleString("tr-TR")} ${unit}</strong> ${escapeHtml(prodName)} satıldı.</p>
+                        <small class="field-hint">Ciro: ${formatTL(itemRev)} • Net Kâr: <strong class="text-success">+${formatTL(itemProfit)}</strong> ${item.note ? `• Not: ${escapeHtml(item.note)}` : ""}</small>
+                    </div>
+                `;
+            })
+            .join("");
+    }
+}
+
+function addDailySaleEntry(productId, qtyVal, noteText = "") {
+    const qty = Number(qtyVal);
+    if (!productId || isNaN(qty) || qty <= 0) return;
+
+    const prod = (storeData.products || []).find((p) => p.id === productId);
+    if (!prod) return;
+
+    storeData.dailySales = storeData.dailySales || {};
+    storeData.dailySales[activeTrackerDate] = storeData.dailySales[activeTrackerDate] || [];
+
+    storeData.dailySales[activeTrackerDate].unshift({
+        id: "sale_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        productId: prod.id,
+        productName: prod.name,
+        qty: Number(qty.toFixed(3)),
+        note: noteText.trim(),
+        author: currentPartner || "Ortak",
+        time: Date.now()
+    });
+
+    const totalSoldToday = storeData.dailySales[activeTrackerDate]
+        .filter((x) => x.productId === prod.id)
+        .reduce((s, x) => s + Number(x.qty), 0);
+
+    saveAndBroadcast(`Günlük satışa +${qty} ${prod.unit} ${prod.name} işledi (Bugün toplam: ${totalSoldToday.toFixed(2)} ${prod.unit})`);
+    showToast(`⚖️ +${qty} ${prod.unit} ${prod.name} eklendi! (Bugün toplam: ${totalSoldToday.toFixed(2)} ${prod.unit})`);
 }
 
 // 5. ORTAK NOTLAR VE İŞLEM GEÇMİŞİ
@@ -1222,6 +1438,87 @@ function setupEventListeners() {
             saveAndBroadcast(`Satış simülasyonunda %${Math.round(mult * 100)} senaryosunu uyguladı`);
             showToast(`📊 Satış simülasyonu %${Math.round(mult * 100)} temposuna göre güncellendi`);
         });
+    });
+
+    // Canlı Günlük Satış Takibi Event Listener'ları
+    const trackerDateInput = document.getElementById("tracker-date-input");
+    if (trackerDateInput) {
+        trackerDateInput.value = activeTrackerDate;
+        trackerDateInput.addEventListener("change", () => {
+            if (trackerDateInput.value) {
+                activeTrackerDate = trackerDateInput.value;
+                renderDailyTracker();
+                if (window.lucide) window.lucide.createIcons();
+            }
+        });
+    }
+
+    document.getElementById("tracker-today-btn")?.addEventListener("click", () => {
+        activeTrackerDate = new Date().toISOString().slice(0, 10);
+        if (trackerDateInput) trackerDateInput.value = activeTrackerDate;
+        renderDailyTracker();
+        if (window.lucide) window.lucide.createIcons();
+    });
+
+    document.getElementById("tracker-clear-day-btn")?.addEventListener("click", () => {
+        storeData.dailySales = storeData.dailySales || {};
+        const currentEntries = storeData.dailySales[activeTrackerDate] || [];
+        if (currentEntries.length === 0) {
+            showToast("Bu tarihte silinecek satış kaydı yok.");
+            return;
+        }
+        if (confirm(`${activeTrackerDate} tarihindeki tüm günlük satış kayıtlarını sıfırlamak istediğinize emin misiniz?`)) {
+            storeData.dailySales[activeTrackerDate] = [];
+            saveAndBroadcast(`${activeTrackerDate} günü satış kayıtlarını sıfırladı`);
+            showToast(`🗑️ ${activeTrackerDate} günü satışları sıfırlandı`);
+        }
+    });
+
+    // Gramaj Hazır Butonları (250g, 500g, 1Kg, 2Kg, 3Kg, 5Kg)
+    document.querySelectorAll(".gram-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const val = Number(btn.getAttribute("data-val")) || 1;
+            const qtyInput = document.getElementById("sale-qty-input");
+            if (qtyInput) qtyInput.value = val;
+        });
+    });
+
+    // Hızlı Satış Ekleme Formu
+    document.getElementById("quick-sale-form")?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const prodId = document.getElementById("sale-product-select")?.value;
+        const qtyVal = document.getElementById("sale-qty-input")?.value;
+        const noteInput = document.getElementById("sale-note-input");
+        const noteVal = noteInput ? noteInput.value : "";
+
+        addDailySaleEntry(prodId, qtyVal, noteVal);
+        if (noteInput) noteInput.value = "";
+    });
+
+    // Tablo Satırından Tek Tıkla (+250g, +500g, +1kg, +3kg) Satış Ekleme
+    document.getElementById("tracker-products-tbody")?.addEventListener("click", (e) => {
+        const chip = e.target.closest(".quick-add-chip");
+        if (chip) {
+            const prodId = chip.getAttribute("data-id");
+            const qtyVal = Number(chip.getAttribute("data-qty")) || 1;
+            addDailySaleEntry(prodId, qtyVal, "Hızlı Buton");
+        }
+    });
+
+    // Sağdaki Listeden Parça Satış Kaydını Silme
+    document.getElementById("tracker-entries-list")?.addEventListener("click", (e) => {
+        const delBtn = e.target.closest(".delete-sale-entry-btn");
+        if (delBtn) {
+            const entryId = delBtn.getAttribute("data-id");
+            storeData.dailySales = storeData.dailySales || {};
+            const list = storeData.dailySales[activeTrackerDate] || [];
+            const target = list.find((x) => x.id === entryId);
+            if (target) {
+                storeData.dailySales[activeTrackerDate] = list.filter((x) => x.id !== entryId);
+                saveAndBroadcast(`Günlük satıştan ${target.qty} birim ${target.productName || "ürün"} kaydını kaldırdı`);
+                showToast(`🗑️ Satış kaydı kaldırıldı`);
+            }
+        }
     });
 
     // Ortak Not Ekleme / Düzenleme / Kaldırma
