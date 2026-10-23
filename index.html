@@ -563,9 +563,13 @@
                         </div>
 
                         <form id="note-form" class="inline-add-form">
-                            <input type="text" id="note-input" placeholder="Örn: Gaziantep toptancısından yeni mahsul fıstık fiyatı 465 TL'ye düştü..." required>
-                            <button type="submit" class="btn btn-primary">
-                                <i data-lucide="send"></i> Paylaş
+                            <input type="hidden" id="editing-note-id" value="">
+                            <input type="text" id="note-input" placeholder="Yeni ortak notu veya toptancı kararı yazın..." required>
+                            <button type="submit" id="note-submit-btn" class="btn btn-primary">
+                                <i data-lucide="plus"></i> <span id="note-submit-text">Yeni Not Ekle</span>
+                            </button>
+                            <button type="button" id="note-cancel-edit-btn" class="btn btn-outline hidden">
+                                İptal
                             </button>
                         </form>
 
