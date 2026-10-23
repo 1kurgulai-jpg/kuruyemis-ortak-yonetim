@@ -4,7 +4,9 @@
 // ============================================================================
 
 // VARSAYILAN KURUYEMİŞ DÜKKANI VERİLERİ (ENES & ALİ OSMAN GÜNCEL RAKAMLARI)
+const DATA_SCHEMA_VERSION = 6;
 const DEFAULT_STORE_DATA = {
+    schemaVersion: DATA_SCHEMA_VERSION,
     roomPin: "1461",
     updatedAt: 1792765071413,
     updatedBy: "Enes",
@@ -121,6 +123,7 @@ let broadcastChannel = null;
 let firebaseRestUrl = localStorage.getItem("ky_fb_url") || "";
 let firebasePollingInterval = null;
 let cloudEventSource = null;
+let cloudPollingInterval = null;
 let isApplyingRemoteUpdate = false;
 const sessionClientId = "client_" + Math.random().toString(36).slice(2, 9);
 
@@ -217,17 +220,23 @@ function initSyncEngine(roomCode) {
     if (savedRaw) {
         try {
             const parsedLocal = JSON.parse(savedRaw);
-            // Eğer tarayıcıda eski demo verisi ("Sistem" veya "Ahmet") kalmışsa, Enes'in güncel verisiyle değiştir
-            const isOldDemo =
-                parsedLocal.updatedBy === "Sistem" ||
-                (parsedLocal.updatedBy && parsedLocal.updatedBy.includes("Ahmet")) ||
-                (Array.isArray(parsedLocal.products) && parsedLocal.products.some((p) => p.id === "p12"));
+            // Eğer telefondaki/tarayıcıdaki veri eski şemaya aitse veya içinde eski örnek ürünler (p5-p12 veya 540 TL Antep fıstığı) kalmışsa anında Enes'in güncel verisiyle değiştir
+            const hasOldSampleProducts =
+                !parsedLocal.schemaVersion ||
+                parsedLocal.schemaVersion < DATA_SCHEMA_VERSION ||
+                (Array.isArray(parsedLocal.products) &&
+                    parsedLocal.products.some(
+                        (p) =>
+                            ["p5", "p6", "p7", "p8", "p9", "p10", "p11", "p12"].includes(p.id) ||
+                            (p.id === "p1" && Number(p.costPrice) === 540)
+                    ));
 
-            if (isOldDemo && (!parsedLocal.updatedAt || parsedLocal.updatedAt <= DEFAULT_STORE_DATA.updatedAt)) {
+            if (hasOldSampleProducts) {
                 storeData = structuredClone(DEFAULT_STORE_DATA);
                 localStorage.setItem(getStorageKey(cleanRoom), JSON.stringify(storeData));
             } else {
                 storeData = parsedLocal;
+                storeData.schemaVersion = DATA_SCHEMA_VERSION;
                 if (Array.isArray(storeData.notes)) {
                     storeData.notes = storeData.notes.filter((n) => n.id !== "n1" && n.id !== "n2");
                 }
@@ -278,15 +287,14 @@ function initSyncEngine(roomCode) {
 
 function getCloudTopicName(roomCode) {
     const safeRoom = roomCode.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
-    return `ky_ortak_db_v1_${safeRoom}`;
+    return `ky_ortak_db_v2_${safeRoom}`;
 }
 
 async function extractPayloadFromNtfyMsg(msg) {
     if (!msg || msg.event !== "message") return null;
-    // Eğer mesaj büyük olduğu için ntfy.sh attachment dosyasına dönüştürdüyse URL'den indir
     if (msg.attachment && msg.attachment.url) {
         try {
-            const attRes = await fetch(msg.attachment.url);
+            const attRes = await fetch(msg.attachment.url, { cache: "no-store" });
             if (attRes.ok) {
                 return await attRes.json();
             }
@@ -304,17 +312,12 @@ async function extractPayloadFromNtfyMsg(msg) {
     return null;
 }
 
-async function setupInstantCloudSync(roomCode) {
-    if (cloudEventSource) {
-        cloudEventSource.close();
-        cloudEventSource = null;
-    }
-
+async function fetchLatestFromInstantCloud(roomCode) {
     const topic = getCloudTopicName(roomCode);
-
-    // 1. Önce buluttaki son kaydedilmiş durumu çek (hem düz mesaj hem de >4KB attachment desteğiyle)
     try {
-        const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
+        const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all&_t=${Date.now()}`, {
+            cache: "no-store"
+        });
         if (res.ok) {
             const text = await res.text();
             const lines = text.trim().split("\n").filter(Boolean);
@@ -323,8 +326,8 @@ async function setupInstantCloudSync(roomCode) {
                     const msg = JSON.parse(lines[i]);
                     const parsedPayload = await extractPayloadFromNtfyMsg(msg);
                     if (parsedPayload && parsedPayload.data && parsedPayload.data.updatedAt) {
-                        if (parsedPayload.data.updatedAt >= storeData.updatedAt) {
-                            applyIncomingData(parsedPayload.data, "Bulut Senkronizasyon", true);
+                        if (parsedPayload.data.updatedAt > storeData.updatedAt) {
+                            applyIncomingData(parsedPayload.data, parsedPayload.data.updatedBy || "Bulut Senkronizasyon", true);
                         }
                         break;
                     }
@@ -336,8 +339,29 @@ async function setupInstantCloudSync(roomCode) {
     } catch (err) {
         console.warn("Bulut geçmişi okunamadı:", err);
     }
+}
 
-    // 2. Gerçek zamanlı SSE (Server-Sent Events) akışına abone ol (diğer ortak veri girdiğinde anında yakalar)
+async function setupInstantCloudSync(roomCode) {
+    if (cloudEventSource) {
+        cloudEventSource.close();
+        cloudEventSource = null;
+    }
+    if (cloudPollingInterval) {
+        clearInterval(cloudPollingInterval);
+        cloudPollingInterval = null;
+    }
+
+    const topic = getCloudTopicName(roomCode);
+
+    // 1. Önce buluttaki son kaydedilmiş durumu çek
+    await fetchLatestFromInstantCloud(roomCode);
+
+    // 2. Mobil tarayıcılar (iOS Safari / Android Chrome) için her 4 saniyede bir aktif yoklama (Polling)
+    cloudPollingInterval = setInterval(() => {
+        fetchLatestFromInstantCloud(roomCode);
+    }, 4000);
+
+    // 3. Gerçek zamanlı SSE (Server-Sent Events) akışına abone ol
     if ("EventSource" in window) {
         try {
             cloudEventSource = new EventSource(`https://ntfy.sh/${topic}/sse`);
@@ -360,14 +384,19 @@ async function setupInstantCloudSync(roomCode) {
 
 async function pushToInstantCloud(roomCode, data) {
     const topic = getCloudTopicName(roomCode);
-    // Mesaj boyutunu 4KB altında tutmak için bulut paketinde son 8 logu gönder
+    // Mesaj boyutunu 4KB altında tutmak için bulut paketinde son 6 logu gönder
     const compactData = {
         ...data,
-        logs: Array.isArray(data.logs) ? data.logs.slice(0, 8) : []
+        schemaVersion: DATA_SCHEMA_VERSION,
+        logs: Array.isArray(data.logs) ? data.logs.slice(0, 6) : []
     };
     try {
         await fetch(`https://ntfy.sh/${topic}`, {
             method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=UTF-8",
+                "Cache-Control": "no-cache"
+            },
             body: JSON.stringify({
                 senderId: sessionClientId,
                 data: compactData
@@ -1244,7 +1273,7 @@ function setupEventListeners() {
 
     // Ortak Davet Linkini Kopyala
     document.getElementById("share-room-btn").addEventListener("click", () => {
-        const shareUrl = `${window.location.origin}${window.location.pathname}?oda=${encodeURIComponent(currentRoom)}`;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?oda=${encodeURIComponent(currentRoom)}&v=${DATA_SCHEMA_VERSION}`;
         navigator.clipboard?.writeText(shareUrl);
         showToast(`🔗 Ortak davet linki kopyalandı! Ortağınıza gönderebilirsiniz.`);
     });
